@@ -77,7 +77,7 @@ This is the cost factor that is used to hash passwords. It currently defaults to
 
 =item * C<2b>
 
-This is the subtype everyone has been using since 2014.
+This is the subtype everyone has been using since 2014.  The change here is that the hashing algorithm now requires utf-8 encoding, and the null terminator must be included for hashing.
 
 =item * C<2y>
 
@@ -85,15 +85,15 @@ This type is considered equivalent to C<2b>. It is common on php but not elsewhe
 
 =item * C<2a>
 
-This is an old and subtly buggy version of bcrypt. This is mainly useful for Crypt::Eksblowfish compatibility.
+This is an old and subtly buggy version of bcrypt. This is mainly useful for Crypt::Eksblowfish compatibility, along with older OpenBSD (pre 5.5) implementations.
 
 =item * C<2x>
 
-This is a very broken version that is only useful for compatibility with ancient php versions.
+This is a very broken version that is only useful for compatibility with ancient php versions and their C<crypt_blowfish> library.
 
 =back
 
-This is C<2b> by default, and you're unlikely to want to change this.
+This is C<2b> by default, and you're unlikely to want to change this.  Details about why this came about can be found here L<http://undeadly.org/cgi?action=article&sid=20140224132743>.  They are all security equivalent but for forward compatibility you should only ever generate new passwords with C<2b>.
 
 =item * hash
 
