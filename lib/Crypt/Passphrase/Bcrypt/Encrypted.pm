@@ -62,9 +62,11 @@ sub recode_hash {
 	$to //= $self->{active};
 	if (my ($hash_type, $alg, $subtype, $id, $cost, $salt, $hash) = _unpack_hash($input)) {
 		return $input if $id eq $to and $alg eq $self->{cipher};
-		my $decrypted = $self->decrypt_hash($alg, $id, $salt, $hash);
-		my $encrypted = $self->encrypt_hash($self->{cipher}, $to, $salt, $decrypted);
-		return _pack_hash($hash_type, $self->{cipher}, $subtype, $to, $cost, $salt, $encrypted);
+		return eval {
+			my $decrypted = $self->decrypt_hash($alg, $id, $salt, $hash);
+			my $encrypted = $self->encrypt_hash($self->{cipher}, $to, $salt, $decrypted);
+			_pack_hash($hash_type, $self->{cipher}, $subtype, $to, $cost, $salt, $encrypted);
+		} // $input;
 	}
 	elsif (($hash_type, $subtype, $cost, $salt, $hash) = _unpack_raw) {
 		my $encrypted = $self->encrypt_hash($self->{cipher}, $to, $salt, $hash);
