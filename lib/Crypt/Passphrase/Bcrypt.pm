@@ -61,6 +61,8 @@ sub verify_password {
 
 This class implements a bcrypt encoder for Crypt::Passphrase. For high-end parameters L<Crypt::Passphrase::Argon2|Crypt::Passphrase::Argon2> is recommended over this module as an encoder, as that provides memory-hardness and more easily allows for long passwords.
 
+Note that in bcrypt passwords may only contain 72 characters and may not contain any null-byte. To work around this limitation this module supports prehashing the input in a way that prevents password shucking.
+
 =head2 Configuration
 
 It accepts the following arguments:
