@@ -5,10 +5,19 @@ use warnings;
 
 use Crypt::Passphrase 0.010 -encoder;
 
-use Carp 'croak';
+use Carp qw/croak carp/;
 use Crypt::Bcrypt 0.011 qw/bcrypt bcrypt_prehashed bcrypt_check_prehashed bcrypt_needs_rehash bcrypt_supported_prehashes/;
 
 my %supported_prehash = map { $_ => 1 } bcrypt_supported_prehashes();
+
+sub ignore {
+}
+
+my %checkers = (
+	ignore => \&ignore,
+	warn   => \&carp,
+	die    => \&croak,
+);
 
 sub new {
 	my ($class, %args) = @_;
@@ -16,15 +25,32 @@ sub new {
 	croak "Unknown subtype $subtype" unless $subtype =~ / \A 2 [abxy] \z /x;
 	my $hash = $args{hash} // '';
 	croak 'Invalid hash' if length $args{hash} and not $supported_prehash{ $args{hash} };
+
+	my $check = $args{length_check} // 'die';
+	my $checker = ref $check ? $check : $checkers{$check};
+	croak "Invalid length check value $check" if not defined $checker;
+
 	return bless {
 		cost    => $args{cost} // 14,
 		subtype => $subtype,
 		hash    => $hash,
+		checker => $checker,
 	}, $class;
 }
 
 sub hash_password {
 	my ($self, $password) = @_;
+
+	if (!$self->{hash} && $self->{checker} != \&ignore) {
+		my $length = length $password;
+		if ($length > 72) {
+			$self->{checker}->("Password is only allowed to be 72 characters, got $length characters");
+		}
+		if ($password =~ /\0/) {
+			$self->{checker}->("Password is not allowed to contain null characters");
+		}
+	}
+
 	my $salt = $self->random_bytes(16);
 	return bcrypt_prehashed($password, $self->{subtype}, $self->{cost}, $salt, $self->{hash});
 }
@@ -61,7 +87,7 @@ sub verify_password {
 
 This class implements a bcrypt encoder for Crypt::Passphrase. For high-end parameters L<Crypt::Passphrase::Argon2|Crypt::Passphrase::Argon2> is recommended over this module as an encoder, as that provides memory-hardness and more easily allows for long passwords.
 
-Note that in bcrypt passwords may only contain 72 characters and may not contain any null-byte. To work around this limitation this module supports prehashing the input in a way that prevents password shucking.
+Note that in bcrypt passwords may only contain 72 characters and may not contain any null-byte. To work around this limitation this module supports prehashing the input in a way that prevents password shucking. By default it will reject such passwords when prehashing is not used.
 
 =head2 Configuration
 
@@ -100,6 +126,28 @@ This is C<2b> by default, and you're unlikely to want to change this.  Details a
 =item * hash
 
 Pre-hash the password using the specified hash. It will support any hash supported by L<Crypt::Bcrypt|Crypt::Bcrypt>, which is currently C<'sha256'>, C<'sha384'> and C<'sha512'>. This is mainly useful because plain bcrypt is not null-byte safe and only supports 72 characters of input. This uses a salt-keyed hash to prevent password shucking.
+
+=item * length_check
+
+When not pre-hashing bcrypt passwords may only contain 72 characters and may not contain any null-byte. The value of this argument decides what to do if a hash is found to violate that restriction. Allowed values are:
+
+=over 4
+
+=item * C<'die'> (the default)
+
+This will die when given an incompliant password.
+
+=item * C<'warn'>
+
+This will warn about the incompliant password.
+
+=item * C<'ignore'>
+
+This will silently pass the password.
+
+=back
+
+Alternatively, you can pass it a subref with your own handler, this will be passed the error message as its argument.
 
 =back
 
