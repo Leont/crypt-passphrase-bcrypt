@@ -122,7 +122,7 @@ sub verify_password {
 
 1;
 
-#ABSTRACT: A base-class for encrypting/peppered Argon2 encoders for Crypt::Passphrase
+#ABSTRACT: A base-class for encrypting/peppered Bcrypt encoders for Crypt::Passphrase
 
 =head1 DESCRIPTION
 
